@@ -1,0 +1,475 @@
+{
+  "name": "Bot Telegram - BuscoJobs Uruguay 🇺🇾",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d89c8a5e-8c4a-4e5a-9c1a-2b3f5e7d9a1b",
+      "name": "Webhook Telegram",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "telegram-ofertas-laborales"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=OK"
+      },
+      "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      "name": "Respond Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/start"
+            }
+          ]
+        }
+      },
+      "id": "f1e2d3c4-b5a6-7890-1234-567890fedcba",
+      "name": "Es comando /start",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=🌟 <b>¡Hola {{ $json.message.from.first_name }}, hoy es tu día de suerte!</b> 🍀\n\nEstoy aquí para ayudarte a encontrar las mejores oportunidades laborales en Uruguay. 💼✨\n\n<b>¿Qué trabajo deseas buscar?</b>\n\nPor favor, escribe tu búsqueda laboral de la forma más sencilla posible para optimizar los resultados.\n\n📝 <i>Ejemplos: \"Cocinero\", \"Programador\", \"Vendedor\", \"Chofer\"</i>",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "b2c3d4e5-f6a7-8901-2345-678901bcdefg",
+      "name": "Enviar Bienvenida",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [900, 180],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtro de insultos\nconst INSULTOS = [\n  'idiota', 'estúpido', 'estupido', 'tonto', 'imbécil', 'imbecil', 'pendejo',\n  'boludo', 'pelotudo', 'gil', 'tarado', 'retrasado', 'mongólico', 'mongolico',\n  'mierda', 'carajo', 'coño', 'puta', 'puto', 'hijo de puta', 'hdp',\n  'la concha', 'la puta madre', 'chupame', 'andate', 'vete a la mierda'\n];\n\nconst mensaje = $input.first().json.message.text.toLowerCase();\nconst contieneInsultos = INSULTOS.some(insulto => mensaje.includes(insulto));\n\nreturn {\n  json: {\n    ...$input.first().json,\n    contieneInsultos: contieneInsultos,\n    busqueda: $input.first().json.message.text\n  }\n};"
+      },
+      "id": "c3d4e5f6-a7b8-9012-3456-789012cdefgh",
+      "name": "Filtrar Insultos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 420]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.contieneInsultos }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "d4e5f6a7-b8c9-0123-4567-890123defghi",
+      "name": "Tiene Insultos",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1120, 420]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=😊 <b>¡Hey! Mantengamos la buena onda!</b> 🤝\n\nGarантizo que tu búsqueda será mucho más productiva si mantenemos una comunicación respetuosa. 🌈\n\nPor favor, intenta nuevamente con una búsqueda laboral válida.\n\n<i>Ejemplos: \"Administrativo\", \"Mecánico\", \"Diseñador\"</i>",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "e5f6a7b8-c9d0-1234-5678-901234efghij",
+      "name": "Mensaje Insultos",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [1340, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://www.buscojobs.com.uy/ofertas/{{ $json.busqueda.trim().toLowerCase().replace(/\\s+/g, '-') }}_?fechainicio=",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "f6a7b8c9-d0e1-2345-6789-012345fghijk",
+      "name": "HTTP Request BuscoJobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 540]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer ofertas del JSON estructurado de Next.js\nconst htmlContent = $input.first().json.data;\n\n// Usar DOMParser (simulado en Node.js con cheerio-like approach)\nconst scriptMatch = htmlContent.match(/<script id=\"__NEXT_DATA__\" type=\"application\\/json\">(.*?)<\\/script>/s);\n\nlet ofertas = [];\n\nif (scriptMatch && scriptMatch[1]) {\n  try {\n    const nextData = JSON.parse(scriptMatch[1]);\n    const ofertasData = nextData?.props?.pageProps?.resultadosIniciales?.ofertas || [];\n    \n    // Extraer fechas y lugares del HTML\n    const placesMatches = htmlContent.match(/ListadoOfertas_location__Oqric[^>]*>([^<]+)</g) || [];\n    const datesMatches = htmlContent.match(/ListadoOfertas_date__F1BFC[^>]*>([^<]+)</g) || [];\n    \n    const places = placesMatches.map(m => m.replace(/.*>([^<]+)<.*/, '$1').trim());\n    const dates = datesMatches.map(m => m.replace(/.*>([^<]+)<.*/, '$1').trim());\n    \n    ofertas = ofertasData.map((oferta, index) => {\n      const cargoSlug = oferta.CargoVacante\n        .toLowerCase()\n        .normalize('NFD')\n        .replace(/[\\u0300-\\u036f]/g, '')\n        .replace(/[^a-z0-9\\s-]/g, '')\n        .replace(/\\s+/g, '-');\n      \n      const ciudadSlug = oferta.Ciudad?.Nombre\n        ? oferta.Ciudad.Nombre\n            .toLowerCase()\n            .normalize('NFD')\n            .replace(/[\\u0300-\\u036f]/g, '')\n            .replace(/[^a-z0-9\\s-]/g, '')\n            .replace(/\\s+/g, '-')\n        : '';\n      \n      const link = ciudadSlug \n        ? `/${cargoSlug}-en-${ciudadSlug}-ID-${oferta.IdOferta}`\n        : `/${cargoSlug}-ID-${oferta.IdOferta}`;\n      \n      return {\n        title: oferta.CargoVacante || 'Sin título',\n        company: oferta.NombreEmpresa || (oferta.Confidencial ? 'Confidencial' : 'Sin empresa'),\n        place: places[index] || oferta.Ciudad?.Nombre || oferta.Departamento?.Nombre || 'Sin ubicación',\n        published: dates[index] || 'Fecha no disponible',\n        link: `https://www.buscojobs.com.uy${link}`,\n        fechaInicio: oferta.FechaInicio\n      };\n    });\n  } catch (error) {\n    console.error('Error parseando JSON:', error);\n  }\n}\n\n// Si no hay ofertas del JSON, intentar extracción con regex (fallback)\nif (ofertas.length === 0) {\n  const placesMatches = htmlContent.match(/ListadoOfertas_location__Oqric[^>]*>([^<]+)</g) || [];\n  const datesMatches = htmlContent.match(/ListadoOfertas_date__F1BFC[^>]*>([^<]+)</g) || [];\n  \n  const places = placesMatches.map(m => m.replace(/.*>([^<]+)<.*/, '$1').trim());\n  const dates = datesMatches.map(m => m.replace(/.*>([^<]+)<.*/, '$1').trim());\n  \n  ofertas = dates.map((date, index) => ({\n    title: 'Título no disponible',\n    company: 'Empresa no disponible',\n    place: places[index] || 'Sin ubicación',\n    published: date,\n    link: 'https://www.buscojobs.com.uy',\n    fechaInicio: null\n  }));\n}\n\nreturn ofertas.map(oferta => ({ json: oferta }));"
+      },
+      "id": "a7b8c9d0-e1f2-3456-7890-123456ghijkl",
+      "name": "Extraer Ofertas JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 540]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtrar por fecha (últimos 15 días) y por relevancia\nconst items = $input.all();\nconst busqueda = $('Filtrar Insultos').first().json.busqueda;\n\n// Función para normalizar texto\nfunction normalizarTexto(texto) {\n  return texto\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .trim();\n}\n\n// Filtrar por fecha (últimos 15 días)\nconst today = new Date();\nconst fifteenDaysAgo = new Date(today.getTime() - 15 * 24 * 60 * 60 * 1000);\n\nconst jobsFiltered = [];\n\nfor (const item of items) {\n  const timeText = item.json.published.toLowerCase().trim();\n  let jobDate = new Date(today);\n  \n  if (item.json.fechaInicio) {\n    jobDate = new Date(item.json.fechaInicio);\n  } else {\n    const match = timeText.match(/hace\\s+(\\d+)\\s+(hora|horas|día|días)/);\n    \n    if (match) {\n      const value = parseInt(match[1], 10);\n      const unit = match[2];\n      \n      if (unit.startsWith('hora')) {\n        jobDate = new Date(today.getTime() - value * 60 * 60 * 1000);\n      } else if (unit.startsWith('día')) {\n        jobDate = new Date(today.getTime() - value * 24 * 60 * 60 * 1000);\n      }\n    } else if (timeText.includes('ayer')) {\n      jobDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);\n    } else if (timeText.includes('hoy')) {\n      jobDate = new Date(today);\n    }\n  }\n  \n  if (jobDate >= fifteenDaysAgo && jobDate <= today) {\n    jobsFiltered.push(item);\n  }\n}\n\n// Filtrar por relevancia\nconst terminoNormalizado = normalizarTexto(busqueda);\nconst palabrasBusqueda = terminoNormalizado.split(/\\s+/).filter(p => p.length > 0);\n\nconst relevantJobs = jobsFiltered.filter(item => {\n  const tituloNormalizado = normalizarTexto(item.json.title || '');\n  \n  // 1. Buscar coincidencia exacta del término completo\n  if (tituloNormalizado.includes(terminoNormalizado)) {\n    return true;\n  }\n  \n  // 2. Buscar coincidencias por palabra individual\n  const coincidencias = palabrasBusqueda.filter(palabra => {\n    if (palabra.length <= 2) return false;\n    return tituloNormalizado.includes(palabra);\n  });\n  \n  if (coincidencias.length > 0) {\n    if (palabrasBusqueda.length > 1) {\n      const porcentajeCoincidencia = coincidencias.length / palabrasBusqueda.length;\n      return porcentajeCoincidencia >= 0.5;\n    }\n    return true;\n  }\n  \n  return false;\n});\n\nreturn relevantJobs;"
+      },
+      "id": "b8c9d0e1-f2a3-4567-8901-234567hijklm",
+      "name": "Filtrar Fecha y Relevancia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 540]
+    },
+    {
+      "parameters": {
+        "maxItems": 15
+      },
+      "id": "c9d0e1f2-a3b4-5678-9012-345678ijklmn",
+      "name": "Limitar a 15",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [2000, 540]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $input.all().length }}",
+              "operation": "equal",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "d0e1f2a3-b4c5-6789-0123-456789jklmno",
+      "name": "Sin Ofertas",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [2220, 540]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Filtrar Insultos').first().json.message.chat.id }}",
+        "text": "=✨ <b>Oportunidades Laborales para {{ $('Filtrar Insultos').first().json.busqueda.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') }}</b> ✨\n\n⚠️ No se encontraron ofertas de trabajo en los últimos 15 días.\n\n<i>Actualizado: {{ $now.format('DD/MM/YYYY HH:mm') }}</i>",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "e1f2a3b4-c5d6-7890-1234-567890klmnop",
+      "name": "Mensaje Sin Ofertas",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [2440, 420],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Filtrar Insultos').first().json.message.chat.id }}",
+        "text": "=🔍 <b>¿Te gustaría realizar otra búsqueda?</b>\n\nEscribe la posición laboral que deseas buscar y te mostraré las mejores oportunidades disponibles. 💼✨\n\n<i>Ejemplos: \"Vendedor\", \"Programador\", \"Enfermero\", \"Contador\"</i>",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "f2a3b4c5-d6e7-8901-2345-678901lmnopq",
+      "name": "Seguimiento Sin Ofertas",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [2660, 420],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Filtrar Insultos').first().json.message.chat.id }}",
+        "text": "=✨ <b>Oportunidades Laborales para {{ $('Filtrar Insultos').first().json.busqueda.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') }}</b> ✨\n\n📍 <b>Titulo:</b> {{ $json.title }}\n🏢 <b>Empresa:</b> {{ $json.company }}\n📅 <b>Fecha:</b> {{ $json.published }}\n📌 <b>Lugar:</b> {{ $json.place }}\n🔗 <b>Link:</b> <a href=\"{{ $json.link }}\">Ver oferta</a>",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "a3b4c5d6-e7f8-9012-3456-789012mnopqr",
+      "name": "Enviar Ofertas Loop",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [2440, 660],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 1000,
+        "unit": "milliseconds"
+      },
+      "id": "b4c5d6e7-f8a9-0123-4567-890123nopqrs",
+      "name": "Delay Entre Mensajes",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2660, 660]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Agregar información del último item para el mensaje de seguimiento\nconst items = $input.all();\nconst totalOfertas = items.length;\nconst busqueda = $('Filtrar Insultos').first().json.busqueda;\n\nconst searchTermCapitalized = busqueda\n  .split(' ')\n  .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())\n  .join(' ');\n\nreturn [{\n  json: {\n    totalOfertas: totalOfertas,\n    busqueda: searchTermCapitalized,\n    chatId: $('Filtrar Insultos').first().json.message.chat.id\n  }\n}];"
+      },
+      "id": "c5d6e7f8-a9b0-1234-5678-901234opqrst",
+      "name": "Preparar Mensaje Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2880, 660]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "=✅ <b>¡Listo! Te envié {{ $json.totalOfertas }} {{ $json.totalOfertas === 1 ? 'oportunidad' : 'oportunidades' }} laboral{{ $json.totalOfertas === 1 ? '' : 'es' }} para {{ $json.busqueda }}</b> 🎉\n\n🔍 <b>¿Quieres buscar otra posición?</b>\n\nSimplemente escribe el nombre del cargo que te interesa y buscaré las mejores ofertas disponibles. 💼✨\n\n<i>Tip: Sé específico para obtener resultados más precisos. Ej: \"Chofer de camión\", \"Asistente administrativo\"</i>",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "d6e7f8a9-b0c1-2345-6789-012345pqrstu",
+      "name": "Mensaje Seguimiento Final",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [3100, 660],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Telegram": {
+      "main": [
+        [
+          {
+            "node": "Respond Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Es comando /start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es comando /start": {
+      "main": [
+        [
+          {
+            "node": "Enviar Bienvenida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Filtrar Insultos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Insultos": {
+      "main": [
+        [
+          {
+            "node": "Tiene Insultos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tiene Insultos": {
+      "main": [
+        [
+          {
+            "node": "Mensaje Insultos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request BuscoJobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request BuscoJobs": {
+      "main": [
+        [
+          {
+            "node": "Extraer Ofertas JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Ofertas JSON": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Fecha y Relevancia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Fecha y Relevancia": {
+      "main": [
+        [
+          {
+            "node": "Limitar a 15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limitar a 15": {
+      "main": [
+        [
+          {
+            "node": "Sin Ofertas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sin Ofertas": {
+      "main": [
+        [
+          {
+            "node": "Mensaje Sin Ofertas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Ofertas Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje Sin Ofertas": {
+      "main": [
+        [
+          {
+            "node": "Seguimiento Sin Ofertas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Ofertas Loop": {
+      "main": [
+        [
+          {
+            "node": "Delay Entre Mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delay Entre Mensajes": {
+      "main": [
+        [
+          {
+            "node": "Preparar Mensaje Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Mensaje Final": {
+      "main": [
+        [
+          {
+            "node": "Mensaje Seguimiento Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-10-18T00:00:00.000Z",
+  "versionId": "1"
+}
